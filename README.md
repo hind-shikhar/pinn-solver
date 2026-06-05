@@ -1,4 +1,4 @@
-# PINNsolver 🧠⚡
+# PINNsolver 
 
 > **Solve any ODE or PDE with a Physics-Informed Neural Network — entirely in your browser.**
 
@@ -7,23 +7,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 PINNsolver is a browser-based tool that trains a neural network to satisfy your differential equation and its boundary conditions — no Python, no server, no install required. All computation runs on your GPU via WebGL (or WebGPU where available).
-
----
-
-## 🚀 Quick Start
-
-```bash
-# Option 1: npx serve (Node.js)
-npx serve .
-
-# Option 2: Python built-in server
-python -m http.server 8080
-
-# Option 3: npm script
-npm start
-```
-
-Then open **http://localhost:3000** (or 8080 for Python).
 
 ---
 
@@ -112,38 +95,6 @@ After training completes, an export toolbar appears:
 - **⬇ CSV** — downloads a grid of `(x, t, u)` values
 - **💾 Model** — saves trained TF.js model weights to Downloads
 - **📋 Config** — copies the full equation + hyperparameters to clipboard as JSON
-
 ---
 
-## 🌐 Deploy
 
-### Netlify (drag & drop — easiest)
-1. Go to [app.netlify.com/drop](https://app.netlify.com/drop)
-2. Drag the `pde-pinn-starter/` folder onto the page
-3. Done — you get a live HTTPS URL instantly
-
-### Vercel
-```bash
-npm install -g vercel
-vercel --prod
-```
-
-### GitHub Pages
-1. Push to a GitHub repo
-2. Settings → Pages → Source → main branch
-3. Live at `https://username.github.io/repo-name`
-
----
-
-## ⚠️ Known Limitations
-
-- **Convergence is not guaranteed** — PINNs can fail on stiff problems or with poor hyperparameters. Increase epochs, neurons, or BC weight if results are poor.
-- **2D+time PDEs** (3 input variables) are not yet supported.
-- **Neumann BCs** on the derivative direction must match the variable being differentiated.
-- Training speed depends on your GPU. WebGPU (Chrome 113+) is significantly faster than WebGL.
-
----
-
-## 📄 License
-
-MIT — free to use, modify, and distribute.
