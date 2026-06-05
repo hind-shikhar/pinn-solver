@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PINNsolver — Solve Any ODE or PDE with AI</title>
+  <meta name="description" content="Solve differential equations with Physics-Informed Neural Networks. Type your ODE or PDE, set boundary conditions, and watch a neural network learn the solution — live in your browser.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-mesh"></div>
+<div class="particles"></div>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">∂</div>
+      <span class="nav-logo-text">PINNsolver</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html"  class="nav-link active">Home</a></li>
+      <li><a href="solver.html" class="nav-link">Solver</a></li>
+      <li><a href="about.html"  class="nav-link">Learn</a></li>
+      <li><a href="solver.html" class="nav-link nav-cta">Launch App →</a></li>
+    </ul>
+    <!-- Hamburger (mobile only) -->
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open navigation menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile nav overlay + drawer -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<nav class="mobile-nav-drawer" id="mobileNavDrawer" aria-label="Mobile navigation">
+  <a href="index.html"  class="nav-link active">Home</a>
+  <a href="solver.html" class="nav-link">Solver</a>
+  <a href="about.html"  class="nav-link">Learn</a>
+  <a href="solver.html" class="nav-link nav-cta">🚀 Launch Solver</a>
+</nav>
+
+<!-- ── Hero ──────────────────────────────────────────────── -->
+<section class="hero page-content">
+  <div class="hero-glow-orb orb-1"></div>
+  <div class="hero-glow-orb orb-2"></div>
+
+  <div class="hero-eyebrow">Physics-Informed Neural Networks</div>
+
+  <h1>Solve Any <span class="gradient-text">ODE or PDE</span><br>with a Neural Network</h1>
+
+  <p class="hero-desc">
+    Type your differential equation, set boundary conditions, and watch a neural network
+    learn the solution — entirely in your browser. No Python, no installation.
+  </p>
+
+  <!-- Live equation ticker -->
+  <div class="equation-ticker" style="margin-bottom:40px" id="eqTicker">
+    <div class="ticker-item active">u_t - 0.01 · u_xx = 0 &nbsp;(Heat Equation)</div>
+    <div class="ticker-item">u_t + u · u_x - 0.01 · u_xx = 0 &nbsp;(Burgers')</div>
+    <div class="ticker-item">u_tt + ω² · u = 0 &nbsp;(Harmonic Oscillator)</div>
+    <div class="ticker-item">u_tt - c² · u_xx = 0 &nbsp;(Wave Equation)</div>
+    <div class="ticker-item">u_xx + u_yy + k² · u = 0 &nbsp;(Helmholtz)</div>
+    <div class="ticker-item">u_t - ε · u_xx + u³ - u = 0 &nbsp;(Allen-Cahn)</div>
+  </div>
+
+  <div class="hero-actions">
+    <a href="solver.html" class="btn btn-primary btn-lg" id="heroLaunchBtn">
+      🚀 Launch Solver
+    </a>
+    <a href="about.html" class="btn btn-ghost btn-lg" id="heroLearnBtn">
+      Learn about PINNs →
+    </a>
+  </div>
+</section>
+
+<!-- ── How it works ──────────────────────────────────────── -->
+<section class="how-section page-content">
+  <div class="container">
+    <div style="text-align:center; margin-bottom:8px">
+      <span class="section-label" style="justify-content:center; gap:12px">How It Works</span>
+    </div>
+    <h2 style="text-align:center; font-size:clamp(1.6rem,3vw,2.2rem)">
+      Three steps to your <span class="gradient-text">solution</span>
+    </h2>
+
+    <div class="how-grid fade-up">
+      <div class="how-item">
+        <div class="how-num">01</div>
+        <h3>Write Your Equation</h3>
+        <p>
+          Type your ODE or PDE using intuitive notation. Use
+          <code style="color:var(--accent);font-family:var(--font-mono)">u_x</code>,
+          <code style="color:var(--accent);font-family:var(--font-mono)">u_xx</code>,
+          <code style="color:var(--accent);font-family:var(--font-mono)">u_t</code>
+          for derivatives. Define domain bounds, boundary conditions, and parameters.
+        </p>
+      </div>
+      <div class="how-item">
+        <div class="how-num">02</div>
+        <h3>Neural Network Trains</h3>
+        <p>
+          A deep neural network is trained to satisfy your equation at thousands of
+          randomly sampled collocation points. It minimises both the PDE residual
+          and boundary condition errors simultaneously.
+        </p>
+      </div>
+      <div class="how-item">
+        <div class="how-num">03</div>
+        <h3>Visualise the Solution</h3>
+        <p>
+          Watch the solution evolve live. For ODEs you get a smooth curve; for
+          PDEs you get an interactive heatmap or 3D surface — updated every few
+          epochs as the network converges.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Equation showcase ─────────────────────────────────── -->
+<section class="equations-section page-content">
+  <div class="container">
+    <span class="section-label" style="justify-content:center">Quick-Load Presets</span>
+    <h2 style="font-size:clamp(1.6rem,3vw,2.2rem); margin-top:8px">
+      Start from a <span class="gradient-text">classic equation</span>
+    </h2>
+    <p style="color:var(--text-secondary); margin-top:8px; font-size:15px">
+      Or define your own — the solver accepts any valid ODE or PDE.
+    </p>
+
+    <div class="eq-showcase">
+      <a href="solver.html?preset=heat" class="eq-card card card-glow" id="cardHeat">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Heat Equation</span>
+          <span class="badge badge-primary">PDE</span>
+        </div>
+        <p>Diffusion of heat through a 1D rod over time.</p>
+        <div class="eq-formula">u_t - α·u_xx = 0</div>
+      </a>
+
+      <a href="solver.html?preset=burgers" class="eq-card card card-glow" id="cardBurgers">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Burgers' Equation</span>
+          <span class="badge badge-primary">PDE</span>
+        </div>
+        <p>Nonlinear convection-diffusion — benchmark for PINNs.</p>
+        <div class="eq-formula">u_t + u·u_x - ν·u_xx = 0</div>
+      </a>
+
+      <a href="solver.html?preset=harmonic" class="eq-card card card-glow" id="cardHarmonic">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Harmonic Oscillator</span>
+          <span class="badge badge-success">ODE</span>
+        </div>
+        <p>Simple harmonic motion — u(t) = cos(ωt).</p>
+        <div class="eq-formula">u_tt + ω²·u = 0</div>
+      </a>
+
+      <a href="solver.html?preset=wave" class="eq-card card card-glow" id="cardWave">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Wave Equation</span>
+          <span class="badge badge-primary">PDE</span>
+        </div>
+        <p>Propagation of waves in a 1D medium.</p>
+        <div class="eq-formula">u_tt - c²·u_xx = 0</div>
+      </a>
+
+      <a href="solver.html?preset=logistic" class="eq-card card card-glow" id="cardLogistic">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Logistic Growth</span>
+          <span class="badge badge-success">ODE</span>
+        </div>
+        <p>Population dynamics with carrying capacity.</p>
+        <div class="eq-formula">u_t - r·u·(1 - u/K) = 0</div>
+      </a>
+
+      <a href="solver.html?preset=helmholtz" class="eq-card card card-glow" id="cardHelmholtz">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Helmholtz Equation</span>
+          <span class="badge badge-primary">PDE 2D</span>
+        </div>
+        <p>Steady-state wave scattering and resonance in 2D domains.</p>
+        <div class="eq-formula">u_xx + u_yy + k²·u = 0</div>
+      </a>
+
+      <a href="solver.html?preset=allen-cahn" class="eq-card card card-glow" id="cardAllenCahn">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Allen-Cahn</span>
+          <span class="badge badge-primary">PDE</span>
+        </div>
+        <p>Phase-field interface dynamics — models material phase transitions.</p>
+        <div class="eq-formula">u_t - ε·u_xx + u³ - u = 0</div>
+      </a>
+
+      <a href="solver.html?preset=poisson" class="eq-card card card-glow" id="cardPoisson">
+        <div class="eq-card-header">
+          <span class="eq-card-name">Poisson Equation</span>
+          <span class="badge badge-primary">PDE 2D</span>
+        </div>
+        <p>2D elliptic equation with known forcing — exact solution sin(πx)sin(πy).</p>
+        <div class="eq-formula">u_xx + u_yy + f(x,y) = 0</div>
+      </a>
+
+      <a href="solver.html" class="eq-card card" id="cardCustom"
+         style="border-style:dashed; background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:140px">
+        <div style="font-size:32px; margin-bottom:12px; opacity:0.4">✏️</div>
+        <span style="font-weight:700; color:var(--text-secondary)">Your Custom Equation</span>
+        <p style="margin-top:8px">Define any ODE or PDE with your own parameters and boundary conditions.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────── -->
+<section class="page-content" style="padding:40px 0 80px">
+  <div class="container">
+    <span class="section-label" style="justify-content:center">Features</span>
+    <h2 style="text-align:center; font-size:clamp(1.6rem,3vw,2.2rem); margin-top:8px">
+      Everything you need to <span class="gradient-text">explore PINNs</span>
+    </h2>
+
+    <div class="feature-grid" style="margin-top:40px">
+
+      <div class="card feature-card card-glow fade-up" id="featureEq">
+        <div class="feature-icon" style="background:var(--primary-subtle)">✏️</div>
+        <h3>User-Defined Equations</h3>
+        <p>Type any ODE or PDE using symbolic notation. The app auto-detects equation type and available variables.</p>
+      </div>
+
+      <div class="card feature-card card-glow fade-up" id="featureLive" style="transition-delay:0.1s">
+        <div class="feature-icon" style="background:rgba(6,182,212,0.15)">⚡</div>
+        <h3>Live In-Browser Training</h3>
+        <p>All computation runs on your GPU via WebGL — no server, no install. Training updates the plot every few epochs.</p>
+      </div>
+
+      <div class="card feature-card card-glow fade-up" id="featureViz" style="transition-delay:0.2s">
+        <div class="feature-icon" style="background:rgba(16,185,129,0.15)">📊</div>
+        <h3>Interactive Visualisation</h3>
+        <p>ODE solutions as smooth curves; PDE solutions as animated heatmaps or 3D surfaces. Zoomable and downloadable.</p>
+      </div>
+
+      <div class="card feature-card card-glow fade-up" id="featureBC" style="transition-delay:0.05s">
+        <div class="feature-icon" style="background:rgba(245,158,11,0.15)">🎯</div>
+        <h3>Flexible Boundary Conditions</h3>
+        <p>Add as many Dirichlet or Neumann BCs as you need. Expressions support sin, cos, exp, and custom parameters.</p>
+      </div>
+
+      <div class="card feature-card card-glow fade-up" id="featureAutoD" style="transition-delay:0.15s">
+        <div class="feature-icon" style="background:rgba(239,68,68,0.15)">🔬</div>
+        <h3>Automatic Differentiation</h3>
+        <p>Derivatives are computed exactly via TensorFlow.js GradientTape — up to second order (∂²u/∂x² etc.).</p>
+      </div>
+
+      <div class="card feature-card card-glow fade-up" id="featurePreset" style="transition-delay:0.25s">
+        <div class="feature-icon" style="background:rgba(124,58,237,0.15)">📦</div>
+        <h3>9 Quick-Load Presets</h3>
+        <p>Heat, Burgers', Wave, Helmholtz, Allen-Cahn, Poisson, Harmonic Oscillator, Logistic Growth, Exponential Decay — one click to load.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Tech stack ────────────────────────────────────────── -->
+<section class="tech-section page-content">
+  <div class="container" style="text-align:center">
+    <p style="font-size:13px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; font-weight:700; margin-bottom:8px">Built with</p>
+    <div class="tech-logos">
+      <div class="tech-logo-item" id="techTF">
+        <div class="tech-logo-icon">🔷</div>
+        TensorFlow.js
+      </div>
+      <div class="tech-logo-item" id="techPlotly">
+        <div class="tech-logo-icon">📈</div>
+        Plotly.js
+      </div>
+      <div class="tech-logo-item" id="techKaTeX">
+        <div class="tech-logo-icon">∫</div>
+        KaTeX
+      </div>
+      <div class="tech-logo-item" id="techWebGL">
+        <div class="tech-logo-icon">⚡</div>
+        WebGL GPU
+      </div>
+      <div class="tech-logo-item" id="techVanilla">
+        <div class="tech-logo-icon">🍦</div>
+        Vanilla JS
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA Banner ─────────────────────────────────────────── -->
+<section class="page-content" style="padding:0 0 100px">
+  <div class="container">
+    <div class="card" style="padding:56px; text-align:center; background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.08)); border-color:rgba(124,58,237,0.3)" id="ctaBanner">
+      <h2 style="font-size:2rem; margin-bottom:16px">
+        Ready to solve <span class="gradient-text">your equation?</span>
+      </h2>
+      <p style="color:var(--text-secondary); font-size:16px; margin-bottom:32px; max-width:480px; margin-left:auto; margin-right:auto">
+        Open the solver, load a preset or type your own equation, and watch a neural network find the solution.
+      </p>
+      <a href="solver.html" class="btn btn-primary btn-lg" id="ctaLaunchBtn">Launch Solver →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>© 2025 <strong>PINNsolver</strong> · Powered by <a href="https://www.tensorflow.org/js" target="_blank" rel="noopener">TensorFlow.js</a></p>
+    <p style="margin-top:6px">Runs entirely in your browser · No server required · Open source</p>
+  </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script>
+  /* Equation ticker */
+  const items = document.querySelectorAll('.ticker-item');
+  let current = 0;
+  setInterval(() => {
+    items[current].classList.remove('active');
+    items[current].style.transform = 'translateY(-20px)';
+    current = (current + 1) % items.length;
+    items[current].style.transform = 'translateY(20px)';
+    items[current].classList.add('active');
+  }, 2800);
+
+  /* Scroll animations */
+  const obs = new IntersectionObserver(
+    es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.1 }
+  );
+  document.querySelectorAll('.fade-up, .scale-in').forEach(el => obs.observe(el));
+
+  /* Particles */
+  const pContainer = document.querySelector('.particles');
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `left:${Math.random()*100}%;--dur:${6+Math.random()*10}s;--delay:${Math.random()*8}s;background:${Math.random()>0.5?'var(--primary-light)':'var(--accent)'};`;
+    pContainer.appendChild(p);
+  }
+
+  /* Pass preset via URL param */
+  document.querySelectorAll('a[href*="solver.html?preset="]').forEach(a => {
+    a.addEventListener('click', e => {
+      const preset = new URL(a.href).searchParams.get('preset');
+      if (preset) sessionStorage.setItem('pinnPreset', preset);
+    });
+  });
+
+  /* Hamburger nav toggle */
+  const hamburger = document.getElementById('navHamburger');
+  const drawer    = document.getElementById('mobileNavDrawer');
+  const overlay   = document.getElementById('mobileNavOverlay');
+  function openNav()  { hamburger.classList.add('open'); drawer.classList.add('open'); overlay.classList.add('open'); hamburger.setAttribute('aria-expanded','true'); document.body.style.overflow='hidden'; }
+  function closeNav() { hamburger.classList.remove('open'); drawer.classList.remove('open'); overlay.classList.remove('open'); hamburger.setAttribute('aria-expanded','false'); document.body.style.overflow=''; }
+  hamburger.addEventListener('click', () => hamburger.classList.contains('open') ? closeNav() : openNav());
+  overlay.addEventListener('click', closeNav);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+</script>
+</body>
+</html>

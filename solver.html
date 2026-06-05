@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PINNsolver — Interactive ODE/PDE Solver</title>
+  <meta name="description" content="Solve differential equations interactively with Physics-Informed Neural Networks. Define your own equation, boundary conditions, and watch the PINN train live.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+</head>
+<body class="solver-body">
+
+<div class="bg-mesh"></div>
+<div class="particles" style="opacity:0.3"></div>
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">∂</div>
+      <span class="nav-logo-text">PINNsolver</span>
+    </a>
+    <div style="display:flex; align-items:center; gap:16px">
+      <!-- Training status -->
+      <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-secondary)">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Idle</span>
+      </div>
+      <!-- TF Backend -->
+      <span class="badge badge-accent" id="tfBackend" style="cursor:default">⏳ Loading…</span>
+    <ul class="nav-links" style="margin:0">
+        <li><a href="index.html"  class="nav-link">Home</a></li>
+        <li><a href="about.html"  class="nav-link">Learn</a></li>
+      </ul>
+      <!-- Hamburger (mobile only) -->
+      <button class="nav-hamburger" id="navHamburger" aria-label="Open navigation menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile nav overlay + drawer -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<nav class="mobile-nav-drawer" id="mobileNavDrawer" aria-label="Mobile navigation">
+  <a href="index.html"  class="nav-link">Home</a>
+  <a href="about.html"  class="nav-link">Learn</a>
+  <a href="solver.html" class="nav-link nav-cta">📊 Open Solver</a>
+</nav>
+
+<!-- ── Solver Grid ──────────────────────────────────────────── -->
+<div class="solver-root">
+  <div class="solver-nav-spacer"></div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       LEFT PANEL — Problem Setup
+       ═══════════════════════════════════════════════════════ -->
+  <div class="panel-left" id="leftPanel">
+
+    <!-- Quick Presets -->
+    <div class="pblock" style="padding-bottom:10px">
+      <div class="pblock-title">⚡ Quick Load</div>
+      <div class="preset-carousel" id="presetPills"></div>
+    </div>
+
+    <!-- Equation Input -->
+    <div class="pblock">
+      <div class="pblock-title">
+        📐 Equation
+        <span class="type-badge unknown" id="typeBadge">—</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Enter ODE / PDE</label>
+        <div class="eq-input-wrapper">
+          <textarea class="input input-mono" id="eqInput" rows="3"
+            placeholder="e.g.  u_t - 0.01*u_xx = 0"
+            spellcheck="false"></textarea>
+        </div>
+        <div class="form-hint">
+          Use <code style="color:var(--accent);font-size:11px">u_x</code> <code style="color:var(--accent);font-size:11px">u_t</code> <code style="color:var(--accent);font-size:11px">u_xx</code> <code style="color:var(--accent);font-size:11px">u_tt</code> <code style="color:var(--accent);font-size:11px">u_xt</code> for derivatives.
+        </div>
+      </div>
+
+      <!-- KaTeX Preview -->
+      <div class="katex-preview" id="eqPreview" style="margin-top:10px">
+        <span style="color:var(--text-muted);font-size:13px">Type an equation above to see preview…</span>
+      </div>
+    </div>
+
+    <!-- Domain -->
+    <div class="pblock">
+      <div class="pblock-title">🗺️ Domain</div>
+
+      <div id="domainX">
+        <div class="domain-label">x ∈ [min, max]</div>
+        <div class="domain-grid">
+          <input class="input input-mono" id="xMin" type="number" step="any" value="0"   placeholder="x min">
+          <input class="input input-mono" id="xMax" type="number" step="any" value="1"   placeholder="x max">
+        </div>
+      </div>
+
+      <div id="domainT" style="margin-top:8px">
+        <div class="domain-label" style="margin-top:2px">t ∈ [min, max]</div>
+        <div class="domain-grid">
+          <input class="input input-mono" id="tMin" type="number" step="any" value="0"   placeholder="t min">
+          <input class="input input-mono" id="tMax" type="number" step="any" value="1"   placeholder="t max">
+        </div>
+      </div>
+
+      <div id="domainY" style="margin-top:8px; display:none">
+        <div class="domain-label">y ∈ [min, max]</div>
+        <div class="domain-grid">
+          <input class="input input-mono" id="yMin" type="number" step="any" value="0"   placeholder="y min">
+          <input class="input input-mono" id="yMax" type="number" step="any" value="1"   placeholder="y max">
+        </div>
+      </div>
+    </div>
+
+    <!-- Boundary Conditions -->
+    <div class="pblock">
+      <div class="pblock-title" style="justify-content:space-between">
+        <span>🎯 Boundary / Initial Conditions</span>
+        <button class="btn btn-ghost btn-sm" id="addBCBtn" title="Add condition">＋ Add</button>
+      </div>
+
+      <div class="bc-scroll">
+        <table class="bc-table" style="width:100%">
+          <thead>
+            <tr>
+              <th style="width:70px">Qty</th>
+              <th style="width:40px">At</th>
+              <th style="width:60px">=</th>
+              <th>Expression</th>
+              <th style="width:28px"></th>
+            </tr>
+          </thead>
+          <tbody id="bcTableBody"></tbody>
+        </table>
+      </div>
+
+      <p class="form-hint" style="margin-top:6px">
+        E.g. <code style="font-size:11px;color:var(--accent)">u</code> at <code style="font-size:11px;color:var(--accent)">x=0</code> = <code style="font-size:11px;color:var(--accent)">0</code>
+      </p>
+    </div>
+
+    <!-- Parameters -->
+    <div class="pblock">
+      <div class="pblock-title" style="justify-content:space-between">
+        <span>🔢 Parameters</span>
+        <button class="btn btn-ghost btn-sm" id="addParamBtn">＋ Add</button>
+      </div>
+      <table style="width:100%; border-collapse:collapse">
+        <thead>
+          <tr>
+            <th style="text-align:left; font-size:11px; color:var(--text-muted); padding:4px 6px; font-weight:700; text-transform:uppercase">Name</th>
+            <th style="text-align:left; font-size:11px; color:var(--text-muted); padding:4px 6px; font-weight:700; text-transform:uppercase">Value</th>
+            <th style="width:28px"></th>
+          </tr>
+        </thead>
+        <tbody id="paramTableBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /panel-left -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       CENTER PANEL — Visualisation
+       ═══════════════════════════════════════════════════════ -->
+  <div class="panel-center" id="centerPanel">
+
+    <!-- Hyperparameters & Run Controls -->
+    <div class="pblock">
+      <div class="pblock-title" style="margin-bottom:12px">⚙️ Network & Training</div>
+
+      <div class="hp-grid" style="margin-bottom:12px">
+        <div class="hp-item">
+          <label for="netLayers">Hidden Layers</label>
+          <input class="input input-mono" id="netLayers" type="number" min="1" max="10" value="4">
+        </div>
+        <div class="hp-item">
+          <label for="netNeurons">Neurons / Layer</label>
+          <input class="input input-mono" id="netNeurons" type="number" min="4" max="256" value="32">
+        </div>
+        <div class="hp-item">
+          <label for="netActivation">Activation</label>
+          <select class="select" id="netActivation">
+            <option value="tanh" selected>tanh (recommended)</option>
+            <option value="sin">sin</option>
+            <option value="swish">swish</option>
+            <option value="elu">elu</option>
+          </select>
+        </div>
+        <div class="hp-item">
+          <label for="netLr">Learning Rate</label>
+          <input class="input input-mono" id="netLr" type="number" step="0.0001" min="0.00001" max="0.1" value="0.001">
+        </div>
+        <div class="hp-item">
+          <label for="trainEpochs">Epochs</label>
+          <input class="input input-mono" id="trainEpochs" type="number" min="100" max="20000" step="100" value="3000">
+        </div>
+        <div class="hp-item">
+          <label for="trainNf">Interior Points</label>
+          <input class="input input-mono" id="trainNf" type="number" min="100" max="5000" step="100" value="1000">
+        </div>
+        <div class="hp-item">
+          <label for="trainNb">BC Points / BC</label>
+          <input class="input input-mono" id="trainNb" type="number" min="10" max="500" step="10" value="50">
+        </div>
+        <div class="hp-item">
+          <label for="updateEvery">Update Every (epochs)</label>
+          <input class="input input-mono" id="updateEvery" type="number" min="1" max="200" value="25">
+        </div>
+        <div class="hp-item" title="Weight applied to the PDE residual loss during training">
+          <label for="physicsWeight">Physics Loss Weight</label>
+          <input class="input input-mono" id="physicsWeight" type="number" step="0.1" min="0.01" max="100" value="1">
+        </div>
+        <div class="hp-item" title="Weight applied to boundary/initial condition loss. Increase if BCs are not satisfied.">
+          <label for="bcWeight">BC Loss Weight</label>
+          <input class="input input-mono" id="bcWeight" type="number" step="0.5" min="0.01" max="1000" value="10">
+        </div>
+        <div class="hp-item" title="Exponential LR decay per epoch: lr = lr0 * exp(-decay * epoch). Use 0 to disable.">
+          <label for="lrDecay">LR Decay Rate</label>
+          <input class="input input-mono" id="lrDecay" type="number" step="0.0001" min="0" max="0.01" value="0.0005">
+        </div>
+        <div class="hp-item" title="Fourier feature embedding lifts inputs to higher frequency space — greatly improves accuracy for oscillatory or multiscale PDEs." style="display:flex; align-items:center; gap:8px; padding-top:18px;">
+          <input type="checkbox" id="useFourier" style="width:16px;height:16px;cursor:pointer;accent-color:var(--primary)">
+          <label for="useFourier" style="font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;margin:0">Fourier Features</label>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar" style="margin-bottom:12px">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+
+      <!-- Run Controls -->
+      <div class="run-row">
+        <button class="btn btn-primary" id="startBtn">▶ Train PINN</button>
+        <button class="btn btn-ghost" id="pauseBtn" disabled>⏸ Pause</button>
+        <button class="btn btn-danger btn-sm" id="resetBtn" disabled title="Reset">↺</button>
+      </div>
+    </div>
+
+    <!-- Solution Plot -->
+    <div class="pblock" style="padding:12px">
+      <div class="chart-header" style="margin-bottom:8px">
+        <span class="chart-title">📈 Solution</span>
+        <!-- Plot mode selector (shown for PDEs) -->
+        <div id="plotModeRow" style="display:none">
+          <div class="tab-nav" style="width:auto">
+            <button class="tab-btn plot-mode-btn active" data-mode="heatmap">Heatmap</button>
+            <button class="tab-btn plot-mode-btn" data-mode="surface">3D Surface</button>
+          </div>
+        </div>
+      </div>
+      <div id="solutionPlot" style="min-height:360px; border-radius:var(--radius-md)">
+        <div class="plot-placeholder">
+          <div class="placeholder-icon">🧮</div>
+          <div>Configure your equation and press <strong>Train PINN</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Toolbar (shown after training completes) -->
+    <div id="exportBar" style="display:none; align-items:center; gap:10px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:var(--radius-lg); padding:10px 14px; backdrop-filter:blur(12px);">
+      <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-right:4px;">📦 Export</span>
+      <button id="exportCsvBtn" class="btn btn-ghost btn-sm" title="Download solution grid as CSV">⬇ CSV</button>
+      <button id="exportModelBtn" class="btn btn-ghost btn-sm" title="Save trained TF.js model weights">💾 Model</button>
+      <button id="exportConfigBtn" class="btn btn-ghost btn-sm" title="Copy full config as JSON to clipboard">📋 Config</button>
+    </div>
+
+    <!-- Loss Plot -->
+    <div class="pblock" style="padding:12px">
+      <div class="chart-title" style="font-size:13px; margin-bottom:8px">📉 Training Loss</div>
+      <div id="lossPlot" style="min-height:220px; border-radius:var(--radius-md)">
+        <div class="plot-placeholder" style="min-height:220px">
+          <div style="font-size:30px; opacity:0.3">📉</div>
+          <div style="font-size:13px">Loss curves will appear here</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-center -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       RIGHT PANEL — Metrics & Info
+       ═══════════════════════════════════════════════════════ -->
+  <div class="panel-right" id="rightPanel">
+
+    <!-- Training Metrics -->
+    <div class="pblock">
+      <div class="pblock-title">📊 Metrics</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Epoch</div>
+          <div class="metric-value primary" id="metricEpoch">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Loss</div>
+          <div class="metric-value" id="metricTotal">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Physics Loss</div>
+          <div class="metric-value accent" id="metricPhysics">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">BC Loss</div>
+          <div class="metric-value success" id="metricBC">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Residual Plot -->
+    <div class="pblock" style="padding:12px">
+      <div class="pblock-title">🔬 PDE Residual</div>
+      <div id="residualPlot" style="min-height:200px; border-radius:var(--radius-md)">
+        <div class="plot-placeholder" style="min-height:200px">
+          <div style="font-size:28px;opacity:0.3">📉</div>
+          <div style="font-size:12px">Residual map (PDE only)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network Diagram -->
+    <div class="pblock">
+      <div class="pblock-title">🧠 Network Architecture</div>
+      <div class="net-diagram" id="netDiagram">
+        <div class="net-layer">
+          <div class="net-node" style="background:var(--accent)"></div>
+          <div class="net-node" style="background:var(--accent)"></div>
+          <div class="net-label">Input</div>
+        </div>
+        <div class="net-arrow">→</div>
+        <div class="net-layer">
+          <div class="net-node"></div><div class="net-node"></div>
+          <div class="net-node"></div><div class="net-node"></div>
+          <div class="net-label">×4</div>
+        </div>
+        <div class="net-arrow">→</div>
+        <div class="net-layer">
+          <div class="net-node" style="background:var(--success)"></div>
+          <div class="net-label">u</div>
+        </div>
+      </div>
+      <p class="form-hint" style="text-align:center; margin-top:6px">
+        Deeper/wider = more expressive, slower
+      </p>
+    </div>
+
+    <!-- Notation Quick Reference -->
+    <div class="pblock">
+      <div class="pblock-title">📖 Notation Guide</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tbody>
+          <tr><td style="font-family:var(--font-mono);color:var(--accent);padding:4px 6px">u_x</td>   <td style="color:var(--text-secondary);padding:4px">∂u/∂x</td></tr>
+          <tr><td style="font-family:var(--font-mono);color:var(--accent);padding:4px 6px">u_t</td>   <td style="color:var(--text-secondary);padding:4px">∂u/∂t</td></tr>
+          <tr><td style="font-family:var(--font-mono);color:var(--accent);padding:4px 6px">u_xx</td>  <td style="color:var(--text-secondary);padding:4px">∂²u/∂x²</td></tr>
+          <tr><td style="font-family:var(--font-mono);color:var(--accent);padding:4px 6px">u_tt</td>  <td style="color:var(--text-secondary);padding:4px">∂²u/∂t²</td></tr>
+          <tr><td style="font-family:var(--font-mono);color:var(--accent);padding:4px 6px">u_xt</td>  <td style="color:var(--text-secondary);padding:4px">∂²u/∂x∂t</td></tr>
+          <tr><td style="font-family:var(--font-mono);color:var(--accent);padding:4px 6px">u_yy</td>  <td style="color:var(--text-secondary);padding:4px">∂²u/∂y²</td></tr>
+        </tbody>
+      </table>
+      <div class="divider"></div>
+      <p class="form-hint" style="margin-top:6px">
+        Functions: <code style="color:var(--warning);font-size:11px">sin cos exp log sqrt tanh</code>
+      </p>
+    </div>
+
+    <!-- Memory Info -->
+    <div class="pblock" style="padding:10px 14px">
+      <div class="pblock-title" style="margin-bottom:4px">💾 GPU Memory</div>
+      <div style="font-size:12px; color:var(--text-muted); font-family:var(--font-mono)" id="memInfo">—</div>
+    </div>
+
+  </div><!-- /panel-right -->
+</div><!-- /solver-root -->
+
+<!-- ── Scripts ──────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.27.0/plotly.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+<script src="js/diff-utils.js"></script>
+<script src="js/eq-parser.js"></script>
+<script src="js/bc-parser.js"></script>
+<script src="js/pinn.js"></script>
+<script src="js/visualizer.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+  /* Check sessionStorage for a preset from the landing page */
+  window.addEventListener('DOMContentLoaded', () => {
+    const preset = sessionStorage.getItem('pinnPreset');
+    if (preset) {
+      sessionStorage.removeItem('pinnPreset');
+      // Give app.js time to initialize before loading preset
+      setTimeout(() => {
+        if (typeof loadPreset === 'function') loadPreset(preset);
+      }, 300);
+    }
+
+    // Check URL param too
+    const urlPreset = new URLSearchParams(window.location.search).get('preset');
+    if (urlPreset) {
+      setTimeout(() => {
+        if (typeof loadPreset === 'function') loadPreset(urlPreset);
+      }, 300);
+    }
+
+    // Update memory info periodically
+    setInterval(() => {
+      if (typeof tf !== 'undefined') {
+        const el = document.getElementById('memInfo');
+        if (el) {
+          const m = tf.memory();
+          el.textContent = `${m.numTensors} tensors · ${(m.numBytes/1024).toFixed(0)} KB`;
+        }
+      }
+    }, 2000);
+
+    // Hamburger mobile nav
+    const hamburger = document.getElementById('navHamburger');
+    const drawer    = document.getElementById('mobileNavDrawer');
+    const overlay   = document.getElementById('mobileNavOverlay');
+    if (hamburger && drawer && overlay) {
+      const openNav  = () => { hamburger.classList.add('open'); drawer.classList.add('open'); overlay.classList.add('open'); hamburger.setAttribute('aria-expanded','true'); };
+      const closeNav = () => { hamburger.classList.remove('open'); drawer.classList.remove('open'); overlay.classList.remove('open'); hamburger.setAttribute('aria-expanded','false'); };
+      hamburger.addEventListener('click', () => hamburger.classList.contains('open') ? closeNav() : openNav());
+      overlay.addEventListener('click', closeNav);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learn About PINNs — PINNsolver</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+  <!-- Site CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <style>
+    /* ───────────────────────────────────────────────
+       RESET & BASE
+    ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #050816;
+      --primary-from: #7c3aed;
+      --primary-to:   #a855f7;
+      --accent:       #06b6d4;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --glass-bg:     rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --glass-blur:   20px;
+      --radius-lg:    20px;
+      --radius-md:    14px;
+      --radius-sm:    8px;
+      --transition:   0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ───────────────────────────────────────────────
+       BACKGROUND MESH & PARTICLES
+    ─────────────────────────────────────────────── */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 60% at 15% 20%, rgba(124,58,237,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 75%, rgba(6,182,212,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(168,85,247,0.07) 0%, transparent 70%);
+    }
+
+    #particles {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: floatParticle linear infinite;
+    }
+
+    @keyframes floatParticle {
+      0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.6; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+
+    /* ───────────────────────────────────────────────
+       NAV
+    ─────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 0 2rem;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(5,8,22,0.75);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-brand .brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--primary-from), var(--primary-to));
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius-sm);
+      transition: color var(--transition), background var(--transition);
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+      background: var(--glass-bg);
+    }
+
+    .nav-links a.active {
+      color: #a855f7;
+      background: rgba(168,85,247,0.12);
+    }
+
+    /* ───────────────────────────────────────────────
+       LAYOUT
+    ─────────────────────────────────────────────── */
+    main {
+      position: relative;
+      z-index: 1;
+      padding-top: 68px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    section {
+      padding: 5rem 0;
+    }
+
+    /* ───────────────────────────────────────────────
+       FADE-UP ANIMATION
+    ─────────────────────────────────────────────── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                  transform 0.7s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* stagger children */
+    .fade-up.delay-1 { transition-delay: 0.1s; }
+    .fade-up.delay-2 { transition-delay: 0.2s; }
+    .fade-up.delay-3 { transition-delay: 0.3s; }
+    .fade-up.delay-4 { transition-delay: 0.4s; }
+    .fade-up.delay-5 { transition-delay: 0.5s; }
+
+    /* ───────────────────────────────────────────────
+       SECTION LABELS & HEADINGS
+    ─────────────────────────────────────────────── */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #a855f7;
+      margin-bottom: 1rem;
+    }
+
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 18px; height: 2px;
+      background: linear-gradient(90deg, var(--primary-from), var(--primary-to));
+      border-radius: 2px;
+    }
+
+    h1, h2, h3, h4 {
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    h2 {
+      font-size: clamp(1.75rem, 3vw, 2.5rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    /* ───────────────────────────────────────────────
+       GLASS CARD
+    ─────────────────────────────────────────────── */
+    .glass-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      padding: 2rem;
+      transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .glass-card:hover {
+      border-color: rgba(255,255,255,0.14);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    /* ───────────────────────────────────────────────
+       HERO SECTION
+    ─────────────────────────────────────────────── */
+    #hero {
+      padding: 7rem 0 5rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 1rem;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #c084fc;
+      margin-bottom: 2rem;
+    }
+
+    .hero-eyebrow .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #a855f7;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    #hero h1 {
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #fff 0%, #c084fc 50%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1.4rem;
+      max-width: 820px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #hero p.hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.8;
+    }
+
+    /* ───────────────────────────────────────────────
+       WHAT ARE PINNS
+    ─────────────────────────────────────────────── */
+    #what-are-pinns .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2.5rem;
+    }
+
+    @media (max-width: 768px) {
+      #what-are-pinns .content-grid { grid-template-columns: 1fr; }
+    }
+
+    .info-block {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1.6rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--transition), transform var(--transition);
+    }
+
+    .info-block::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: linear-gradient(180deg, var(--primary-from), var(--primary-to));
+      border-radius: 0 2px 2px 0;
+    }
+
+    .info-block:hover {
+      border-color: rgba(168,85,247,0.3);
+      transform: translateY(-3px);
+    }
+
+    .info-block .block-icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .info-block h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .info-block p {
+      font-size: 0.92rem;
+      margin: 0;
+    }
+
+    .pinn-diagram {
+      margin-top: 3rem;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .diagram-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .diagram-node .node-box {
+      padding: 0.7rem 1.2rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .node-input  { background: rgba(100,116,139,0.2); border: 1px solid rgba(100,116,139,0.4); color: #94a3b8; }
+    .node-nn     { background: rgba(124,58,237,0.2);  border: 1px solid rgba(124,58,237,0.5);  color: #c084fc; }
+    .node-output { background: rgba(6,182,212,0.15);  border: 1px solid rgba(6,182,212,0.4);   color: #67e8f9; }
+    .node-loss   { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.35);  color: #fca5a5; }
+
+    .diagram-node .node-label { font-size: 0.7rem; color: var(--text-secondary); }
+
+    .diagram-arrow {
+      color: var(--text-secondary);
+      font-size: 1.4rem;
+      line-height: 1;
+      margin-top: -1.2rem;
+    }
+
+    /* ───────────────────────────────────────────────
+       LOSS FUNCTION SECTION
+    ─────────────────────────────────────────────── */
+    #loss-function {
+      background: linear-gradient(180deg, transparent, rgba(124,58,237,0.04), transparent);
+    }
+
+    .math-display {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: 1.4rem 2rem;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+
+    .math-display .katex { font-size: 1.15rem; }
+    .math-display .math-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 0.6rem;
+      display: block;
+    }
+
+    .loss-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .loss-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+
+    .loss-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+
+    .loss-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .loss-card:hover::after { opacity: 1; }
+
+    .loss-card.physics-card {
+      border-top: 2px solid var(--primary-to);
+    }
+    .loss-card.physics-card:hover {
+      border-color: var(--primary-to);
+      box-shadow: 0 16px 48px rgba(168,85,247,0.2);
+    }
+
+    .loss-card.bc-card {
+      border-top: 2px solid var(--accent);
+    }
+    .loss-card.bc-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 16px 48px rgba(6,182,212,0.2);
+    }
+
+    .loss-card.data-card {
+      border-top: 2px solid #f59e0b;
+    }
+    .loss-card.data-card:hover {
+      border-color: #f59e0b;
+      box-shadow: 0 16px 48px rgba(245,158,11,0.15);
+    }
+
+    .loss-card-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .badge-purple { background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+    .badge-cyan   { background: rgba(6,182,212,0.15); color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }
+    .badge-amber  { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+
+    .loss-card h4 { margin-bottom: 0.5rem; }
+    .loss-card p  { font-size: 0.9rem; }
+
+    .loss-card .math-inline {
+      background: rgba(0,0,0,0.3);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 1rem;
+      margin-top: 0.8rem;
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    /* ───────────────────────────────────────────────
+       AUTO-DIFF SECTION
+    ─────────────────────────────────────────────── */
+    #autodiff {
+      padding: 5rem 0;
+    }
+
+    .autodiff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .autodiff-grid { grid-template-columns: 1fr; }
+    }
+
+    .code-block {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: #e2e8f0;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .code-block::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: 0.75rem; right: 1rem;
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .code-comment { color: #64748b; }
+    .code-keyword { color: #c084fc; }
+    .code-fn      { color: #67e8f9; }
+    .code-string  { color: #86efac; }
+    .code-number  { color: #fcd34d; }
+    .code-var     { color: #e2e8f0; }
+
+    .autodiff-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-from), var(--primary-to));
+      display: grid;
+      place-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    .step-content h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .step-content p  { font-size: 0.88rem; margin: 0; }
+
+    /* ───────────────────────────────────────────────
+       COMPARISON TABLE
+    ─────────────────────────────────────────────── */
+    #comparison {
+      background: linear-gradient(180deg, transparent, rgba(6,182,212,0.03), transparent);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      background: var(--glass-bg);
+      margin-top: 2.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    thead tr {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    thead th {
+      padding: 1.1rem 1.4rem;
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    thead th:first-child { color: var(--text-secondary); }
+    thead th:nth-child(2) { color: #94a3b8; }
+    thead th:last-child  { color: #a855f7; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background var(--transition);
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    tbody td {
+      padding: 1rem 1.4rem;
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+
+    tbody td:first-child {
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .td-good  { color: #86efac !important; }
+    .td-mid   { color: #fcd34d !important; }
+    .td-bad   { color: #fca5a5 !important; }
+
+    .check  { color: #4ade80; margin-right: 0.3rem; }
+    .cross  { color: #f87171; margin-right: 0.3rem; }
+    .partly { color: #facc15; margin-right: 0.3rem; }
+
+    /* ───────────────────────────────────────────────
+       EQUATION TYPES
+    ─────────────────────────────────────────────── */
+    .eq-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+
+    .eq-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+
+    .eq-card:hover {
+      transform: translateY(-6px);
+    }
+
+    .eq-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: var(--card-grad);
+    }
+
+    .eq-card.ode-card  { --card-grad: linear-gradient(90deg, #4ade80, #22d3ee); }
+    .eq-card.pde1-card { --card-grad: linear-gradient(90deg, var(--primary-from), var(--primary-to)); }
+    .eq-card.pde2-card { --card-grad: linear-gradient(90deg, var(--accent), #818cf8); }
+
+    .eq-card:hover .eq-glow {
+      opacity: 1;
+    }
+
+    .eq-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .eq-card.ode-card  .eq-glow { background: radial-gradient(ellipse at 30% 0%, rgba(74,222,128,0.08) 0%, transparent 70%); }
+    .eq-card.pde1-card .eq-glow { background: radial-gradient(ellipse at 30% 0%, rgba(168,85,247,0.1) 0%, transparent 70%); }
+    .eq-card.pde2-card .eq-glow { background: radial-gradient(ellipse at 30% 0%, rgba(6,182,212,0.08) 0%, transparent 70%); }
+
+    .eq-badge {
+      display: inline-block;
+      padding: 0.25rem 0.85rem;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+      position: relative;
+    }
+
+    .badge-green { background: rgba(74,222,128,0.15); color: #86efac; border: 1px solid rgba(74,222,128,0.3); }
+
+    .eq-card h3 { margin-bottom: 0.5rem; position: relative; }
+    .eq-card p  { font-size: 0.9rem; position: relative; }
+
+    .eq-vars {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.8rem;
+      position: relative;
+    }
+
+    .eq-var-tag {
+      padding: 0.2rem 0.7rem;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .eq-examples {
+      margin-top: 1rem;
+      position: relative;
+    }
+
+    .eq-examples p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .eq-examples strong { color: var(--text-primary); font-size: 0.8rem; }
+
+    .example-list {
+      list-style: none;
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .example-list li {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .example-list li::before {
+      content: '→';
+      color: var(--text-secondary);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    /* ───────────────────────────────────────────────
+       NOTATION GUIDE
+    ─────────────────────────────────────────────── */
+    #notation .notation-card {
+      margin-top: 2.5rem;
+    }
+
+    .notation-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 0;
+    }
+
+    .notation-row {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .notation-row:last-child { border-bottom: none; }
+
+    .notation-symbol {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #a855f7;
+      min-width: 80px;
+      background: rgba(168,85,247,0.08);
+      border: 1px solid rgba(168,85,247,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.3rem 0.75rem;
+      text-align: center;
+    }
+
+    .notation-equals {
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .notation-meaning {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      flex: 1;
+    }
+
+    .notation-math { font-size: 0.95rem; }
+
+    .notation-desc {
+      font-size: 0.83rem;
+      color: var(--text-secondary);
+    }
+
+    .notation-table-wrapper {
+      overflow: hidden;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+    }
+
+    .notation-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .notation-table thead tr {
+      background: rgba(168,85,247,0.1);
+    }
+
+    .notation-table thead th {
+      padding: 0.9rem 1.4rem;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #c084fc;
+    }
+
+    .notation-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background var(--transition);
+    }
+
+    .notation-table tbody tr:last-child { border-bottom: none; }
+    .notation-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    .notation-table tbody td {
+      padding: 0.9rem 1.4rem;
+      vertical-align: middle;
+    }
+
+    .mono-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.92rem;
+      color: #a855f7;
+      font-weight: 600;
+    }
+
+    .meaning-cell { color: var(--text-secondary); font-size: 0.9rem; }
+    .math-cell    { color: var(--text-primary); font-size: 0.9rem; }
+
+    /* ───────────────────────────────────────────────
+       CTA SECTION
+    ─────────────────────────────────────────────── */
+    #cta {
+      padding: 6rem 0;
+      text-align: center;
+    }
+
+    .cta-box {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+    }
+
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -60%; left: 50%;
+      transform: translateX(-50%);
+      width: 500px; height: 300px;
+      background: radial-gradient(ellipse, rgba(168,85,247,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-box h2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.8rem);
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+
+    .cta-box p {
+      font-size: 1.05rem;
+      max-width: 500px;
+      margin: 0 auto 2.5rem;
+      position: relative;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.9rem 2.2rem;
+      background: linear-gradient(135deg, var(--primary-from), var(--primary-to));
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+      transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+      position: relative;
+      box-shadow: 0 4px 24px rgba(124,58,237,0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 36px rgba(124,58,237,0.55);
+      opacity: 0.92;
+    }
+
+    .btn-primary svg {
+      width: 18px; height: 18px;
+      transition: transform var(--transition);
+    }
+
+    .btn-primary:hover svg {
+      transform: translateX(4px);
+    }
+
+    /* ───────────────────────────────────────────────
+       FOOTER
+    ─────────────────────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--glass-border);
+      padding: 1.75rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    footer span { display: flex; align-items: center; gap: 0.4rem; }
+    footer .footer-tf { color: #f97316; }
+
+    /* ───────────────────────────────────────────────
+       GRADIENT TEXT UTILITY
+    ─────────────────────────────────────────────── */
+    .grad-text {
+      background: linear-gradient(135deg, var(--primary-to), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ───────────────────────────────────────────────
+       SCROLL-BAR STYLING
+    ─────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(168,85,247,0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(168,85,247,0.5); }
+
+    /* ───────────────────────────────────────────────
+       RESPONSIVE TWEAKS
+    ─────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      nav { padding: 0 1rem; }
+      .nav-brand span { display: none; }
+      .nav-links a { padding: 0.4rem 0.65rem; font-size: 0.82rem; }
+      .glass-card { padding: 1.4rem; }
+      #hero { padding: 5rem 0 3.5rem; }
+      .pinn-diagram { gap: 0.5rem; }
+      .diagram-arrow { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background mesh -->
+  <div class="bg-mesh" aria-hidden="true"></div>
+
+  <!-- Particles container -->
+  <div id="particles" aria-hidden="true"></div>
+
+  <!-- ─────────────────── NAV ─────────────────── -->
+  <nav role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-brand" aria-label="PINNsolver Home">
+      <div class="brand-icon" aria-hidden="true">∇</div>
+      <span>PINNsolver</span>
+    </a>
+    <ul class="nav-links" role="list">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="solver.html">Solver</a></li>
+      <li><a href="about.html" class="active" aria-current="page">Learn</a></li>
+    </ul>
+  </nav>
+
+  <!-- ─────────────────── MAIN ─────────────────── -->
+  <main>
+
+    <!-- 1. HERO -->
+    <section id="hero">
+      <div class="container">
+        <div class="fade-up">
+          <div class="hero-eyebrow">
+            <span class="dot"></span>
+            Educational Guide
+          </div>
+        </div>
+        <h1 class="fade-up delay-1">
+          Understanding<br />Physics-Informed<br />Neural Networks
+        </h1>
+        <p class="hero-sub fade-up delay-2">
+          A deep dive into how PINNs merge the representational power of
+          deep learning with the governing laws of physics — solving differential
+          equations without traditional numerical grids.
+        </p>
+      </div>
+    </section>
+
+    <!-- 2. WHAT ARE PINNs -->
+    <section id="what-are-pinns">
+      <div class="container">
+        <div class="fade-up">
+          <div class="section-label">Fundamentals</div>
+          <h2>What are <span class="grad-text">PINNs</span>?</h2>
+          <p style="max-width:680px;">
+            Physics-Informed Neural Networks (PINNs) are a class of deep neural networks
+            that are trained to satisfy differential equations by <strong style="color:var(--text-primary)">embedding the physics
+            directly in the loss function</strong>. Instead of learning from large data sets,
+            PINNs leverage known physical laws as soft constraints — making them powerful
+            tools for solving, discovering, and identifying partial and ordinary differential equations.
+          </p>
+        </div>
+
+        <div class="content-grid">
+          <div class="info-block fade-up delay-1">
+            <div class="block-icon">🧠</div>
+            <h4>Neural Network Approximator</h4>
+            <p>A deep neural network u<sub>θ</sub>(x,t) acts as a continuous, mesh-free approximation to the solution of the differential equation over the entire domain.</p>
+          </div>
+          <div class="info-block fade-up delay-2">
+            <div class="block-icon">⚖️</div>
+            <h4>Physics as Constraints</h4>
+            <p>The PDE residual is evaluated at random collocation points inside the domain and penalized in the loss function, guiding the network toward the true solution.</p>
+          </div>
+          <div class="info-block fade-up delay-3">
+            <div class="block-icon">🎯</div>
+            <h4>Boundary & Initial Conditions</h4>
+            <p>Known boundary and initial conditions are enforced as separate loss terms, ensuring the solution satisfies the problem's constraints at all edges of the domain.</p>
+          </div>
+          <div class="info-block fade-up delay-4">
+            <div class="block-icon">🔍</div>
+            <h4>Inverse Problem Capability</h4>
+            <p>By treating physical parameters as trainable variables, PINNs can solve inverse problems — identifying unknown coefficients from sparse observations.</p>
+          </div>
+        </div>
+
+        <!-- Architecture Diagram -->
+        <div class="pinn-diagram fade-up">
+          <div class="diagram-node">
+            <div class="node-box node-input">(x, t)</div>
+            <div class="node-label">Inputs</div>
+          </div>
+          <div class="diagram-arrow">→</div>
+          <div class="diagram-node">
+            <div class="node-box node-nn">Neural Network u<sub>θ</sub></div>
+            <div class="node-label">Approximator</div>
+          </div>
+          <div class="diagram-arrow">→</div>
+          <div class="diagram-node">
+            <div class="node-box node-output">û(x, t)</div>
+            <div class="node-label">Prediction</div>
+          </div>
+          <div class="diagram-arrow">→</div>
+          <div class="diagram-node">
+            <div class="node-box node-loss">𝓛 = 𝓛<sub>pde</sub> + 𝓛<sub>bc</sub></div>
+            <div class="node-label">Composite Loss</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. LOSS FUNCTION -->
+    <section id="loss-function">
+      <div class="container">
+        <div class="fade-up">
+          <div class="section-label">Mathematics</div>
+          <h2>The <span class="grad-text">Loss Function</span></h2>
+          <p style="max-width:680px;">
+            The total training objective is a weighted combination of three terms, each encoding a different physical constraint. Minimizing this composite loss simultaneously drives the network to satisfy the PDE, boundary conditions, and any available data.
+          </p>
+        </div>
+
+        <!-- Total Loss -->
+        <div class="math-display fade-up delay-1">
+          <div id="math-total"></div>
+          <span class="math-label">Total composite loss — weighted sum of all constraints</span>
+        </div>
+
+        <!-- Physics Loss -->
+        <div class="math-display fade-up delay-2">
+          <div id="math-physics"></div>
+          <span class="math-label">PDE residual loss — enforces the governing equation at collocation points</span>
+        </div>
+
+        <!-- BC Loss -->
+        <div class="math-display fade-up delay-3">
+          <div id="math-bc"></div>
+          <span class="math-label">Boundary/initial condition loss — enforces known solution values at the boundary</span>
+        </div>
+
+        <!-- Loss component cards -->
+        <div class="loss-cards">
+          <div class="loss-card physics-card fade-up delay-1">
+            <span class="loss-card-badge badge-purple">Physics Loss</span>
+            <h4>PDE Residual  𝓛<sub>physics</sub></h4>
+            <p>Computed by substituting the network output into the PDE using automatic differentiation. Evaluated at <em>N<sub>f</sub></em> randomly sampled collocation points inside the domain.</p>
+            <div class="math-inline">
+              <div id="math-lphys-card"></div>
+            </div>
+          </div>
+
+          <div class="loss-card bc-card fade-up delay-2">
+            <span class="loss-card-badge badge-cyan">Boundary Loss</span>
+            <h4>BC / IC Constraint  𝓛<sub>BC</sub></h4>
+            <p>Penalizes deviation of the predicted solution from known boundary or initial conditions at <em>N<sub>b</sub></em> boundary sample points g(x).</p>
+            <div class="math-inline">
+              <div id="math-lbc-card"></div>
+            </div>
+          </div>
+
+          <div class="loss-card data-card fade-up delay-3">
+            <span class="loss-card-badge badge-amber">Data Loss (optional)</span>
+            <h4>Sparse Observations  𝓛<sub>data</sub></h4>
+            <p>When labelled measurements are available, a data-fit term can be added. Essential for inverse problems where physical parameters are unknown and must be identified.</p>
+            <div class="math-inline">
+              <div id="math-ldata-card"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. AUTO-DIFFERENTIATION -->
+    <section id="autodiff">
+      <div class="container">
+        <div class="fade-up">
+          <div class="section-label">Under the Hood</div>
+          <h2>How <span class="grad-text">Auto-Differentiation</span> Works</h2>
+          <p style="max-width:700px;">
+            Unlike traditional numerical solvers that approximate derivatives on a fixed mesh,
+            PINNs exploit <strong style="color:var(--text-primary)">automatic differentiation (AD)</strong> via
+            <code style="font-family:'JetBrains Mono',monospace;color:#a855f7;font-size:0.9em">tf.GradientTape</code>
+            to compute exact, symbolic-quality derivatives of the neural network output with respect to its inputs.
+            These exact derivatives are then substituted directly into the PDE expression.
+          </p>
+        </div>
+
+        <div class="autodiff-grid fade-up delay-1">
+          <!-- Steps -->
+          <div class="autodiff-steps">
+            <div class="step-item">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Forward Pass</h4>
+                <p>Feed spatial/temporal coordinates (x, t) through the neural network inside a <code style="font-family:'JetBrains Mono',monospace;color:#a855f7;font-size:0.88em">GradientTape</code> context to produce the predicted solution û.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>First-Order Derivatives</h4>
+                <p>Call <code style="font-family:'JetBrains Mono',monospace;color:#67e8f9;font-size:0.88em">tape.gradient(u, [x, t])</code> to obtain ∂u/∂x and ∂u/∂t exactly, using reverse-mode AD through the network graph.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <h4>Higher-Order Derivatives</h4>
+                <p>Nest multiple <code style="font-family:'JetBrains Mono',monospace;color:#67e8f9;font-size:0.88em">GradientTape</code> contexts to compute ∂²u/∂x², ∂²u/∂t², or mixed partials needed for second-order PDEs.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <h4>PDE Residual Assembly</h4>
+                <p>Combine the computed derivatives into the PDE expression — e.g. <em>u_t − α·u_xx</em> — and compute the mean-squared residual as the physics loss term.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">5</div>
+              <div class="step-content">
+                <h4>Backpropagation</h4>
+                <p>Differentiate the total loss with respect to all network weights θ and update them with Adam or L-BFGS, iterating until convergence.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Block -->
+          <div class="code-block fade-up delay-2" data-lang="TensorFlow.js">
+<span class="code-comment">// Auto-differentiation for PDE residual</span>
+<span class="code-keyword">function</span> <span class="code-fn">computeResidual</span>(model, x, t) {
+  <span class="code-keyword">return</span> tf.<span class="code-fn">tidy</span>(() =&gt; {
+    <span class="code-keyword">const</span> x_t = tf.<span class="code-fn">variable</span>(x);
+    <span class="code-keyword">const</span> t_t = tf.<span class="code-fn">variable</span>(t);
+
+    <span class="code-comment">// First-order derivatives</span>
+    <span class="code-keyword">const</span> [u, u_x, u_t] = tf.<span class="code-fn">grads</span>(
+      (xi, ti) =&gt; model.<span class="code-fn">predict</span>(
+        tf.<span class="code-fn">concat</span>([xi, ti], <span class="code-number">1</span>)
+      )
+    )([x_t, t_t]);
+
+    <span class="code-comment">// Second-order: u_xx via nested grad</span>
+    <span class="code-keyword">const</span> [u_xx] = tf.<span class="code-fn">grads</span>(
+      (xi) =&gt; tf.<span class="code-fn">grads</span>(
+        (xi2) =&gt; model.<span class="code-fn">predict</span>(
+          tf.<span class="code-fn">concat</span>([xi2, t_t], <span class="code-number">1</span>)
+        )
+      )([xi])[<span class="code-number">0</span>]
+    )([x_t])[<span class="code-number">0</span>];
+
+    <span class="code-comment">// PDE: heat equation residual u_t - α*u_xx</span>
+    <span class="code-keyword">const</span> alpha = tf.<span class="code-fn">scalar</span>(<span class="code-number">0.01</span>);
+    <span class="code-keyword">return</span> u_t.<span class="code-fn">sub</span>(alpha.<span class="code-fn">mul</span>(u_xx));
+  });
+}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. COMPARISON TABLE -->
+    <section id="comparison">
+      <div class="container">
+        <div class="fade-up">
+          <div class="section-label">Analysis</div>
+          <h2>PINNs vs. <span class="grad-text">Traditional Methods</span></h2>
+          <p style="max-width:650px;">
+            How do Physics-Informed Neural Networks compare to established numerical
+            methods like Finite Element (FEM) and Finite Difference (FDM) solvers?
+          </p>
+        </div>
+
+        <div class="table-wrapper fade-up delay-1">
+          <table>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Traditional Methods (FEM / FDM)</th>
+                <th>PINNs</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Discretization</td>
+                <td class="td-bad"><span class="cross">✗</span>Requires structured mesh or grid; expensive in high dimensions</td>
+                <td class="td-good"><span class="check">✓</span>Mesh-free; collocation points sampled randomly in the domain</td>
+              </tr>
+              <tr>
+                <td>Data Needed</td>
+                <td class="td-good"><span class="check">✓</span>Works with governing equation alone; no training data required</td>
+                <td class="td-good"><span class="check">✓</span>Works with equation alone; can also incorporate sparse measurements</td>
+              </tr>
+              <tr>
+                <td>Solution Type</td>
+                <td class="td-mid"><span class="partly">~</span>Discrete; values only at mesh nodes, interpolation needed elsewhere</td>
+                <td class="td-good"><span class="check">✓</span>Continuous; evaluate solution at any point in the domain analytically</td>
+              </tr>
+              <tr>
+                <td>Inverse Problems</td>
+                <td class="td-bad"><span class="cross">✗</span>Requires reformulation; separate algorithms; computationally expensive</td>
+                <td class="td-good"><span class="check">✓</span>Natural fit; treat unknown parameters as additional trainable variables</td>
+              </tr>
+              <tr>
+                <td>Implementation</td>
+                <td class="td-mid"><span class="partly">~</span>Mature tooling (FEniCS, deal.II) but requires domain expertise</td>
+                <td class="td-good"><span class="check">✓</span>Implemented in standard ML frameworks (TF, PyTorch, JAX)</td>
+              </tr>
+              <tr>
+                <td>High Dimensions</td>
+                <td class="td-bad"><span class="cross">✗</span>Suffers from curse of dimensionality; mesh size grows exponentially</td>
+                <td class="td-good"><span class="check">✓</span>Scales better to high-dimensional problems (d &gt; 4)</td>
+              </tr>
+              <tr>
+                <td>Accuracy</td>
+                <td class="td-good"><span class="check">✓</span>High accuracy with fine mesh; provable convergence guarantees</td>
+                <td class="td-mid"><span class="partly">~</span>Depends on network architecture; may struggle with sharp gradients</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. EQUATION TYPES -->
+    <section id="equation-types">
+      <div class="container">
+        <div class="fade-up">
+          <div class="section-label">Supported Problems</div>
+          <h2>Equation <span class="grad-text">Types</span></h2>
+          <p style="max-width:640px;">
+            PINNsolver supports a variety of differential equation classes, from simple
+            one-dimensional ODEs to two-dimensional elliptic PDEs.
+          </p>
+        </div>
+
+        <div class="eq-cards">
+          <!-- ODE Card -->
+          <div class="eq-card ode-card fade-up delay-1">
+            <div class="eq-glow"></div>
+            <span class="eq-badge badge-green">ODE</span>
+            <h3>Ordinary Differential Equations</h3>
+            <p>Functions of a single independent variable. Governed by one or more ordinary derivatives with respect to that variable.</p>
+            <div class="eq-vars">
+              <span class="eq-var-tag">u(t)</span>
+              <span class="eq-var-tag">du/dt</span>
+              <span class="eq-var-tag">d²u/dt²</span>
+            </div>
+            <div class="eq-examples">
+              <strong>Examples</strong>
+              <ul class="example-list">
+                <li>Harmonic oscillator: u'' + ω²u = 0</li>
+                <li>Logistic growth: u' = r·u·(1 − u/K)</li>
+                <li>Van der Pol oscillator</li>
+                <li>Exponential decay</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- PDE-1D Card -->
+          <div class="eq-card pde1-card fade-up delay-2">
+            <div class="eq-glow"></div>
+            <span class="eq-badge badge-purple">PDE · 1D</span>
+            <h3>1D Partial Differential Equations</h3>
+            <p>Functions of a spatial variable x and time t. Classic time-evolution problems on a 1D domain.</p>
+            <div class="eq-vars">
+              <span class="eq-var-tag">u(x, t)</span>
+              <span class="eq-var-tag">u_x</span>
+              <span class="eq-var-tag">u_t</span>
+              <span class="eq-var-tag">u_xx</span>
+            </div>
+            <div class="eq-examples">
+              <strong>Examples</strong>
+              <ul class="example-list">
+                <li>Heat eq.: u_t = α·u_xx</li>
+                <li>Burgers eq.: u_t + u·u_x = ν·u_xx</li>
+                <li>Wave eq.: u_tt = c²·u_xx</li>
+                <li>Advection eq.: u_t + c·u_x = 0</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- PDE-2D Card -->
+          <div class="eq-card pde2-card fade-up delay-3">
+            <div class="eq-glow"></div>
+            <span class="eq-badge badge-cyan">PDE · 2D</span>
+            <h3>2D Partial Differential Equations</h3>
+            <p>Functions of two spatial variables x and y. Steady-state problems on a two-dimensional domain.</p>
+            <div class="eq-vars">
+              <span class="eq-var-tag">u(x, y)</span>
+              <span class="eq-var-tag">u_x</span>
+              <span class="eq-var-tag">u_y</span>
+              <span class="eq-var-tag">u_xx</span>
+              <span class="eq-var-tag">u_yy</span>
+            </div>
+            <div class="eq-examples">
+              <strong>Examples</strong>
+              <ul class="example-list">
+                <li>Laplace eq.: u_xx + u_yy = 0</li>
+                <li>Poisson eq.: u_xx + u_yy = f(x,y)</li>
+                <li>Steady-state heat conduction</li>
+                <li>Electrostatic potential</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. NOTATION GUIDE -->
+    <section id="notation">
+      <div class="container">
+        <div class="fade-up">
+          <div class="section-label">Reference</div>
+          <h2>Notation <span class="grad-text">Guide</span></h2>
+          <p style="max-width:620px;">
+            PINNsolver uses a compact subscript notation for partial derivatives,
+            consistent with standard physics and mathematics literature.
+          </p>
+        </div>
+
+        <div class="glass-card notation-card fade-up delay-1">
+          <div class="notation-table-wrapper">
+            <table class="notation-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Meaning</th>
+                  <th>Mathematical Notation</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono-cell">u_x</td>
+                  <td class="meaning-cell">First derivative w.r.t. x</td>
+                  <td class="math-cell"><span id="n1"></span></td>
+                  <td class="meaning-cell">Spatial gradient in x-direction</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">u_t</td>
+                  <td class="meaning-cell">First derivative w.r.t. t</td>
+                  <td class="math-cell"><span id="n2"></span></td>
+                  <td class="meaning-cell">Temporal rate of change</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">u_xx</td>
+                  <td class="meaning-cell">Second derivative w.r.t. x</td>
+                  <td class="math-cell"><span id="n3"></span></td>
+                  <td class="meaning-cell">Spatial Laplacian / diffusion term</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">u_tt</td>
+                  <td class="meaning-cell">Second derivative w.r.t. t</td>
+                  <td class="math-cell"><span id="n4"></span></td>
+                  <td class="meaning-cell">Temporal acceleration (wave eq.)</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">u_xt</td>
+                  <td class="meaning-cell">Mixed partial derivative</td>
+                  <td class="math-cell"><span id="n5"></span></td>
+                  <td class="meaning-cell">Cross-derivative (Schwarz-symmetric)</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">u_yy</td>
+                  <td class="meaning-cell">Second derivative w.r.t. y</td>
+                  <td class="math-cell"><span id="n6"></span></td>
+                  <td class="meaning-cell">Spatial Laplacian in y-direction</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">N[u]</td>
+                  <td class="meaning-cell">Nonlinear differential operator</td>
+                  <td class="math-cell"><span id="n7"></span></td>
+                  <td class="meaning-cell">The full PDE expression, set to zero</td>
+                </tr>
+                <tr>
+                  <td class="mono-cell">u_θ</td>
+                  <td class="meaning-cell">Network approximation</td>
+                  <td class="math-cell"><span id="n8"></span></td>
+                  <td class="meaning-cell">Neural network with parameters θ</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. CTA -->
+    <section id="cta">
+      <div class="container">
+        <div class="cta-box fade-up">
+          <h2>Ready to <span class="grad-text">Solve</span>?</h2>
+          <p>
+            Put the theory into practice. Launch the PINN Solver, configure your
+            equation, and watch the network learn the solution in real time.
+          </p>
+          <a href="solver.html" class="btn-primary">
+            Open Solver
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─────────────────── FOOTER ─────────────────── -->
+  <footer>
+    <span>© 2025 PINNsolver. All rights reserved.</span>
+    <span>Made with <span class="footer-tf">♥</span> and TensorFlow.js</span>
+  </footer>
+
+  <!-- ─────────────────── SCRIPTS ─────────────────── -->
+  <script>
+    /* ── Particle System ── */
+    (function () {
+      const container = document.getElementById('particles');
+      const colors = ['rgba(168,85,247,', 'rgba(6,182,212,', 'rgba(124,58,237,'];
+      const count = 28;
+
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 3 + 1;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const opacity = (Math.random() * 0.4 + 0.15).toFixed(2);
+        p.style.cssText = `
+          width: ${size}px;
+          height: ${size}px;
+          left: ${Math.random() * 100}%;
+          background: ${color}${opacity});
+          animation-duration: ${Math.random() * 18 + 12}s;
+          animation-delay: ${Math.random() * 15}s;
+          box-shadow: 0 0 ${size * 2}px ${color}0.5);
+        `;
+        container.appendChild(p);
+      }
+    })();
+
+    /* ── Intersection Observer for fade-up ── */
+    (function () {
+      const els = document.querySelectorAll('.fade-up');
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              e.target.classList.add('visible');
+              io.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+      );
+      els.forEach(el => io.observe(el));
+    })();
+
+    /* ── KaTeX Math Rendering ── */
+    document.addEventListener('DOMContentLoaded', function () {
+      // Wait for KaTeX to load
+      function tryRender() {
+        if (typeof katex === 'undefined') {
+          setTimeout(tryRender, 100);
+          return;
+        }
+        renderMath();
+      }
+      tryRender();
+    });
+
+    function renderMath() {
+      const opts = { throwOnError: false, displayMode: false };
+      const displayOpts = { throwOnError: false, displayMode: true };
+
+      /* Total Loss */
+      katex.render(
+        '\\mathcal{L}_{\\text{total}} = \\lambda_{\\text{phy}} \\cdot \\mathcal{L}_{\\text{physics}} + \\lambda_{\\text{BC}} \\cdot \\mathcal{L}_{\\text{BC}} + \\lambda_{\\text{data}} \\cdot \\mathcal{L}_{\\text{data}}',
+        document.getElementById('math-total'),
+        displayOpts
+      );
+
+      /* Physics Loss */
+      katex.render(
+        '\\mathcal{L}_{\\text{physics}} = \\frac{1}{N_f} \\sum_{i=1}^{N_f} \\left| \\mathcal{N}[u_{\\theta}]\\,(x_i,\\, t_i) \\right|^2',
+        document.getElementById('math-physics'),
+        displayOpts
+      );
+
+      /* BC Loss */
+      katex.render(
+        '\\mathcal{L}_{\\text{BC}} = \\frac{1}{N_b} \\sum_{j=1}^{N_b} \\left| u_{\\theta}(x_j) - g(x_j) \\right|^2',
+        document.getElementById('math-bc'),
+        displayOpts
+      );
+
+      /* Card inline maths */
+      katex.render(
+        '\\frac{1}{N_f}\\sum_i\\left|\\mathcal{N}[u_\\theta](x_i,t_i)\\right|^2',
+        document.getElementById('math-lphys-card'),
+        opts
+      );
+      katex.render(
+        '\\frac{1}{N_b}\\sum_j\\left|u_\\theta(x_j) - g(x_j)\\right|^2',
+        document.getElementById('math-lbc-card'),
+        opts
+      );
+      katex.render(
+        '\\frac{1}{N_d}\\sum_k\\left|u_\\theta(x_k) - u^*(x_k)\\right|^2',
+        document.getElementById('math-ldata-card'),
+        opts
+      );
+
+      /* Notation table */
+      const notations = [
+        ['n1', '\\dfrac{\\partial u}{\\partial x}'],
+        ['n2', '\\dfrac{\\partial u}{\\partial t}'],
+        ['n3', '\\dfrac{\\partial^2 u}{\\partial x^2}'],
+        ['n4', '\\dfrac{\\partial^2 u}{\\partial t^2}'],
+        ['n5', '\\dfrac{\\partial^2 u}{\\partial x\\,\\partial t}'],
+        ['n6', '\\dfrac{\\partial^2 u}{\\partial y^2}'],
+        ['n7', '\\mathcal{N}[u] = 0'],
+        ['n8', 'u_\\theta(x, t)'],
+      ];
+      notations.forEach(([id, expr]) => {
+        const el = document.getElementById(id);
+        if (el) katex.render(expr, el, opts);
+      });
+    }
+  </script>
+
+</body>
+</html>
